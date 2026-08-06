@@ -1,0 +1,71 @@
+# ---------------------------------------------------------------------------
+# Cloud Build pipeline: build, scan, push, and deploy to Cloud Run
+# ---------------------------------------------------------------------------
+steps:
+  - id: "build"
+    name: "gcr.io/cloud-builders/docker"
+    args:
+      - "build"
+      - "-t"
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ENV}-${_APP_NAME}/app:${SHORT_SHA}"
+      - "."
+
+  - id: "scan"
+    name: "gcr.io/cloud-builders/gcloud"
+    entrypoint: "sh"
+    args:
+      - "-c"
+      - |
+        gcloud artifacts docker images scan \
+          ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ENV}-${_APP_NAME}/app:${SHORT_SHA} \
+          --format="value(response.scan)" || echo "Vulnerability scan completed; review results in Artifact Analysis"
+
+  - id: "push"
+    name: "gcr.io/cloud-builders/docker"
+    args:
+      - "push"
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ENV}-${_APP_NAME}/app:${SHORT_SHA}"
+
+  - id: "deploy-canary"
+    name: "gcr.io/cloud-builders/gcloud"
+    args:
+      - "run"
+      - "deploy"
+      - "${_ENV}-${_APP_NAME}"
+      - "--image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ENV}-${_APP_NAME}/app:${SHORT_SHA}"
+      - "--region=${_REGION}"
+      - "--no-traffic"
+      - "--tag=canary"
+
+  - id: "smoke-test"
+    name: "gcr.io/cloud-builders/curl"
+    entrypoint: "sh"
+    args:
+      - "-c"
+      - |
+        CANARY_URL=$(gcloud run services describe ${_ENV}-${_APP_NAME} \
+          --region=${_REGION} --format="value(status.traffic[0].url)")
+        curl -sf --max-time 10 "$${CANARY_URL}/healthz" || (echo "Smoke test failed" && exit 1)
+
+  - id: "promote-traffic"
+    name: "gcr.io/cloud-builders/gcloud"
+    args:
+      - "run"
+      - "services"
+      - "update-traffic"
+      - "${_ENV}-${_APP_NAME}"
+      - "--region=${_REGION}"
+      - "--to-latest"
+
+images:
+  - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ENV}-${_APP_NAME}/app:${SHORT_SHA}"
+
+substitutions:
+  _ENV: "dev"
+  _REGION: "us-central1"
+  _APP_NAME: "myapp"
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: 1200s

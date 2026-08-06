@@ -1,0 +1,75 @@
+# ---------------------------------------------------------------------------
+# Cloud Build pipeline: build, push, and rolling-update deploy to the
+# Compute Engine Managed Instance Group (via a new instance template).
+# ---------------------------------------------------------------------------
+steps:
+  - id: "build"
+    name: "gcr.io/cloud-builders/docker"
+    args:
+      - "build"
+      - "-t"
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ENV}-${_APP_NAME}/app:${SHORT_SHA}"
+      - "."
+
+  - id: "push"
+    name: "gcr.io/cloud-builders/docker"
+    args:
+      - "push"
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ENV}-${_APP_NAME}/app:${SHORT_SHA}"
+
+  - id: "render-new-template"
+    name: "gcr.io/cloud-builders/gcloud"
+    entrypoint: "sh"
+    args:
+      - "-c"
+      - |
+        NEW_TAG="${SHORT_SHA}"
+        IMAGE="${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ENV}-${_APP_NAME}/app:$${NEW_TAG}"
+        gcloud compute instance-templates create ${_ENV}-${_APP_NAME}-tmpl-$${NEW_TAG} \
+          --source-instance-template=${_ENV}-${_APP_NAME}-tmpl-base \
+          --metadata=gce-container-declaration="$(cat <<EOC
+        spec:
+          containers:
+            - name: ${_APP_NAME}
+              image: $${IMAGE}
+          restartPolicy: Always
+        EOC
+        )"
+
+  - id: "rolling-update"
+    name: "gcr.io/cloud-builders/gcloud"
+    args:
+      - "compute"
+      - "instance-groups"
+      - "managed"
+      - "rolling-action"
+      - "start-update"
+      - "${_ENV}-${_APP_NAME}-mig"
+      - "--region=${_REGION}"
+      - "--version=template=${_ENV}-${_APP_NAME}-tmpl-${SHORT_SHA}"
+      - "--max-surge=3"
+      - "--max-unavailable=0"
+
+  - id: "wait-for-stable"
+    name: "gcr.io/cloud-builders/gcloud"
+    args:
+      - "compute"
+      - "instance-groups"
+      - "managed"
+      - "wait-until"
+      - "${_ENV}-${_APP_NAME}-mig"
+      - "--region=${_REGION}"
+      - "--stable"
+
+images:
+  - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ENV}-${_APP_NAME}/app:${SHORT_SHA}"
+
+substitutions:
+  _ENV: "dev"
+  _REGION: "us-central1"
+  _APP_NAME: "myapp"
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: 1800s

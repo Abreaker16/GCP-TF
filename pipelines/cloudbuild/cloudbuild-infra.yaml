@@ -1,0 +1,58 @@
+# ---------------------------------------------------------------------------
+# Cloud Build pipeline: Terraform infrastructure plan/apply
+# Trigger: PR -> plan only. Merge to main (or tag) -> plan + apply.
+# Substitution _ENV selects which environments/<env> directory to run against.
+# Substitution _ACTION = plan | apply
+# ---------------------------------------------------------------------------
+steps:
+  - id: "tf-fmt-check"
+    name: "hashicorp/terraform:1.7"
+    entrypoint: "sh"
+    args:
+      - "-c"
+      - "terraform fmt -check -recursive environments/${_ENV} modules"
+
+  - id: "tf-init"
+    name: "hashicorp/terraform:1.7"
+    dir: "environments/${_ENV}"
+    entrypoint: "terraform"
+    args: ["init", "-input=false"]
+
+  - id: "tf-validate"
+    name: "hashicorp/terraform:1.7"
+    dir: "environments/${_ENV}"
+    entrypoint: "terraform"
+    args: ["validate"]
+
+  - id: "tf-plan"
+    name: "hashicorp/terraform:1.7"
+    dir: "environments/${_ENV}"
+    entrypoint: "terraform"
+    args:
+      - "plan"
+      - "-input=false"
+      - "-var-file=terraform.tfvars"
+      - "-out=tfplan"
+
+  - id: "tf-apply"
+    name: "hashicorp/terraform:1.7"
+    dir: "environments/${_ENV}"
+    entrypoint: "sh"
+    args:
+      - "-c"
+      - |
+        if [ "${_ACTION}" = "apply" ]; then
+          terraform apply -input=false -auto-approve tfplan
+        else
+          echo "Skipping apply (_ACTION=${_ACTION}); plan-only run."
+        fi
+
+substitutions:
+  _ENV: "dev"
+  _ACTION: "plan"
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  dynamic_substitutions: true
+
+timeout: 1800s

@@ -1,0 +1,11 @@
+host_project_id      = "my-gcp-project-net-host"  # shared VPC host project (see environments/network-hub)
+project_id          = "my-gcp-project-staging"
+region              = "us-central1"
+environment         = "staging"
+app_name            = "myapp"
+compute_platform    = "gke"                # gke | cloud_run | compute_engine
+container_image     = "us-central1-docker.pkg.dev/my-gcp-project-staging/staging-myapp/app:latest"
+authorized_ip_ranges = ["203.0.113.0/24"]
+billing_account_id  = null
+budget_amount        = 1000
+notification_email  = "platform-team@example.com"

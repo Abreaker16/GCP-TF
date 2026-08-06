@@ -1,0 +1,11 @@
+host_project_id      = "my-gcp-project-net-host"  # shared VPC host project (see environments/network-hub)
+project_id          = "my-gcp-project-dev"
+region              = "us-central1"
+environment         = "dev"
+app_name            = "myapp"
+compute_platform    = "cloud_run"          # gke | cloud_run | compute_engine
+container_image     = "us-docker.pkg.dev/cloudrun/container/hello"
+authorized_ip_ranges = ["203.0.113.0/24"]  # your office/VPN CIDR for IAP SSH
+billing_account_id  = null
+budget_amount        = 200
+notification_email  = "platform-team@example.com"
