@@ -1,4 +1,4 @@
-# GCP Enterprise Platform — Terraform Module & CI/CD Pipelines
+# GCP — Terraform Module & CI/CD Pipelines
 
 Production-grade, modular Terraform for deploying an application to Google Cloud,
 with Cloud Build pipelines for infrastructure delivery and application deployment
