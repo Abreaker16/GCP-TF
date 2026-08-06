@@ -63,9 +63,9 @@ Typical team workflow: feature branches merge into `develop` (auto-deploys to de
 ```
 network-hub project (Shared VPC HOST — no app workloads, applied once)
  └── shared-vpc  (single VPC)
-       ├── dev-primary      10.10.0.0/20   (region us-central1) ─┐
-       ├── staging-primary  10.11.0.0/20   (region us-central1)  ├─ one Cloud Router + Cloud NAT per region
-       └── prod-primary     10.12.0.0/20   (region us-central1) ─┘
+       ├── dev-primary      10.10.0.0/20   (region asia-south1) ─┐
+       ├── staging-primary  10.11.0.0/20   (region asia-south1)  ├─ one Cloud Router + Cloud NAT per region
+       └── prod-primary     10.12.0.0/20   (region asia-south1) ─┘
 
 my-gcp-project-dev      (service project) ── uses dev-primary only
 my-gcp-project-staging  (service project) ── uses staging-primary only
