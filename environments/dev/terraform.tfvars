@@ -1,5 +1,5 @@
-host_project_id      = "my-gcp-project-net-host"  # shared VPC host project (see environments/network-hub)
-project_id          = "my-gcp-project-dev"
+host_project_id      = "shared-vpc-internal-poc-tf"  # shared VPC host project (see environments/network-hub)
+project_id          = "terraform-uat-internal-poc"
 region              = "asia-south1"
 environment         = "dev"
 app_name            = "myapp"
