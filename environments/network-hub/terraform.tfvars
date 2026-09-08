@@ -1,4 +1,4 @@
-host_project_id      = "my-gcp-project-net-host"   # dedicated networking-only project
+host_project_id      = "shared-vpc-internal-poc-tf"   # dedicated networking-only project
 region               = "asia-south1"
 network_name         = "shared-vpc"
 enable_flow_logs     = true
